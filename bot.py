@@ -200,12 +200,23 @@ def load_bots_data():
 
 
 def send_blacklist(blacklist):
-	if len(blacklist) > 0:
-		for bot in bots:
-			logger.info(f"Send blacklist list to {bot['ip_address']}")
-			api_bot = FtRestClient(f"http://{bot['ip_address']}", bot['username'], bot['password'])
-			for line in blacklist:
-				api_bot.blacklist(line)
+    if len(blacklist) > 0:
+        for bot in bots:
+            logger.info(f"Fetching current blacklist from {bot['ip_address']}")
+            api_bot = FtRestClient(f"http://{bot['ip_address']}", bot['username'], bot['password'])
+
+            # 获取当前的 bot 的 blacklist
+            current_blacklist = set(api_bot.blacklist())
+
+            # 找出传入的 blacklist 中 bot 目前不包含的条目
+            new_blacklist_items = set(blacklist) - current_blacklist
+
+            # 如果有不一致的条目，发送更新
+            if new_blacklist_items:
+                logger.info(f"Updating blacklist for {bot['ip_address']} with {new_blacklist_items}")
+                api_bot.blacklist(*new_blacklist_items)
+            else:
+                logger.info(f"No updates needed for {bot['ip_address']}")
 
 
 if __name__ == "__main__":
