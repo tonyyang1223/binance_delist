@@ -119,7 +119,8 @@ def get_delist_tokens(url):
 		if len(new_blacklist) > 0:
 			tokens.extend(new_blacklist)
 			save_local_blacklist()
-			send_blacklist(new_blacklist)
+
+		send_blacklist()
 
 	except Exception as e:
 		logger.error("Failed to get article list.")
