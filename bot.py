@@ -222,7 +222,7 @@ def send_blacklist():
 if __name__ == "__main__":
 	load_bots_data()
 	open_local_blacklist()
-	send_blacklist(tokens)
+	send_blacklist()
 	open_local_processed()
 
 	starttime = time.monotonic()
