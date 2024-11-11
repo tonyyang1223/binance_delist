@@ -207,7 +207,7 @@ def send_blacklist():
 		api_bot = FtRestClient(f"http://{bot['ip_address']}", bot['username'], bot['password'])
 
 		# 获取当前的 bot 的 blacklist
-		current_blacklist = set(api_bot.blacklist())
+		current_blacklist = set(api_bot.blacklist()['blacklist'])
 
 		# 找出传入的 blacklist 中 bot 目前不包含的条目
 		new_blacklist_items = set(tokens) - current_blacklist
