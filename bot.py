@@ -38,12 +38,16 @@ handler_rf = RotatingFileHandler(
 )
 handler_rf.setFormatter(Formatter(FILE_LOGFORMAT))
 logger.addHandler(handler_rf)
+
 DEBUG = False
 # 定义代理
 proxies = {
     "http": "http://127.0.0.1:7897",
     "https": "http://127.0.0.1:7897",
 }
+if DEBUG:
+    import pdb
+    pdb.set_trace()
 def get_delist_tokens(url):
 
 	class_p_list_coins = "css-zwb0rk"
@@ -111,7 +115,7 @@ def get_delist_tokens(url):
 							content = meta.get("content", "")
 							if "Binance will remove" in content:
 								if content and (content not in has_been_processed) and (content not in new_processed):
-									new_processed.append(title)	
+									new_processed.append(content)	
 									logger.info(f"Found delisting notice: {content}")									
 									# 使用正则表达式提取交易对
 									pairs = re.findall(r'\b[A-Z]+/[A-Z]+\b', content)
@@ -132,7 +136,7 @@ def get_delist_tokens(url):
 		if len(new_blacklist) > 0:
 			tokens.extend(new_blacklist)
 			save_local_blacklist()
-
+		logger.info(f"Send to bost blacklist")
 		send_blacklist()
 
 	except Exception as e:
