@@ -38,14 +38,23 @@ handler_rf = RotatingFileHandler(
 )
 handler_rf.setFormatter(Formatter(FILE_LOGFORMAT))
 logger.addHandler(handler_rf)
-
+DEBUG = False
+# 定义代理
+proxies = {
+    "http": "http://127.0.0.1:7897",
+    "https": "http://127.0.0.1:7897",
+}
 def get_delist_tokens(url):
+
 	class_p_list_coins = "css-zwb0rk"
 	new_blacklist = []
 	new_processed = []
 	try:
 		logger.info("Scrape delisting page")
-		response = requests.get(url)
+		if DEBUG:
+			response = requests.get(url,proxies=proxies)
+		else:
+			response = requests.get(url)
 		response.raise_for_status()  # 如果请求失败将会抛出异常
 		count_notice = 5
 		html_source = response.text
@@ -67,12 +76,11 @@ def get_delist_tokens(url):
 				code = article.get("code")
 				title = article.get("title", "").upper()
 				article_type = article.get("type")
-				release_date = article.get("releaseDate")
+				release_date = article.get("releaseDate")				
 				
-				if title and (title not in has_been_processed) and (title not in new_processed):
-					new_processed.append(title)
-					if "BINANCE WILL DELIST " in title:
-
+				if "BINANCE WILL DELIST " in title:
+					if title and (title not in has_been_processed) and (title not in new_processed):
+						new_processed.append(title)	
 						logger.info(f"New title : {title}")
 						title = title.replace("BINANCE WILL DELIST ", "")
 						arr_title = title.split(" ON ")
@@ -81,25 +89,30 @@ def get_delist_tokens(url):
 							blacklist = f"{coin}/.*"
 							if (blacklist not in tokens) and (blacklist not in new_blacklist):
 								new_blacklist.append(blacklist)
-					elif ("NOTICE OF REMOVAL OF " in title) and ("MARGIN" not in title) and (count_notice > 0):
-						
-						count_notice -= 1
-						formatted_title = title.lower().replace(" ", "-")
-						new_url = f"https://www.binance.com/en/support/announcement/{formatted_title}-{code}"
-						logger.info(f"NOTICE OF REMOVAL OF  url {new_url}")
-						try:
+				elif ("NOTICE OF REMOVAL OF " in title) and ("MARGIN" not in title) and (count_notice > 0):
+					
+					count_notice -= 1
+					formatted_title = title.lower().replace(" ", "-")
+					new_url = f"https://www.binance.com/en/support/announcement/{formatted_title}-{code}"
+					logger.info(f"NOTICE OF REMOVAL OF  url {new_url}")
+					try:
+						if DEBUG:
+							new_response = requests.get(new_url,proxies=proxies)
+							new_response.raise_for_status()
+						else:
 							new_response = requests.get(new_url)
 							new_response.raise_for_status()
-							
-							# 进一步处理新 URL 的内容
-							new_soup = BeautifulSoup(new_response.text, "html.parser")
-							meta_tags = new_soup.head.find_all("meta", content=True)
-							
-							for meta in meta_tags:
-								content = meta.get("content", "")
-								if "Binance will remove" in content:
-									logger.info(f"Found delisting notice: {content}")
-									
+						
+						# 进一步处理新 URL 的内容
+						new_soup = BeautifulSoup(new_response.text, "html.parser")
+						meta_tags = new_soup.head.find_all("meta", content=True)
+						
+						for meta in meta_tags:
+							content = meta.get("content", "")
+							if "Binance will remove" in content:
+								if content and (content not in has_been_processed) and (content not in new_processed):
+									new_processed.append(title)	
+									logger.info(f"Found delisting notice: {content}")									
 									# 使用正则表达式提取交易对
 									pairs = re.findall(r'\b[A-Z]+/[A-Z]+\b', content)
 									logger.info(f"Extracted pairs: {pairs}")
@@ -109,9 +122,9 @@ def get_delist_tokens(url):
 										coin = coin.strip()
 										if (not coin in tokens) and (not coin in new_blacklist):
 											new_blacklist.append(coin)   
-						except requests.RequestException as e:
-							logger.error(f"Failed to fetch new URL: {new_url}")
-							logger.error(e)
+					except requests.RequestException as e:
+						logger.error(f"Failed to fetch new URL: {new_url}")
+						logger.error(e)
 		if len(new_processed) > 0:
 			has_been_processed.extend(new_processed)
 			save_local_processed()
@@ -127,6 +140,7 @@ def get_delist_tokens(url):
 
 
 def open_local_blacklist():
+
 
 	try:
 		logger.info("Loading local blacklist file")
@@ -193,11 +207,12 @@ def save_local_processed():
 
 
 def load_bots_data():
+	new_bots = []
 	with Path(path_bots_file).open() if path_bots_file != '-' else sys.stdin as file:
 		data_bots = rapidjson.load(file, parse_mode=CONFIG_PARSE_MODE)
 		for line in data_bots:
-			bots.append(line)
-
+			new_bots.append(line)
+	return new_bots
 
 def send_blacklist(blacklist):
     if len(blacklist) > 0:
@@ -229,3 +244,5 @@ if __name__ == "__main__":
 	while True:
 		get_delist_tokens(url)
 		time.sleep(loop_secs - ((time.monotonic() - starttime) % loop_secs))
+		load_bots_data()
+		
