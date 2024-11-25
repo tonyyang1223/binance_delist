@@ -17,7 +17,7 @@ CONFIG_PARSE_MODE = rapidjson.PM_COMMENTS | rapidjson.PM_TRAILING_COMMAS
 tokens = []
 has_been_processed = []
 bots = []
-
+force_update = 0
 from logging import Formatter
 from logging.handlers import RotatingFileHandler
 loop_secs = 90
@@ -132,7 +132,8 @@ def get_delist_tokens(url):
 		if len(new_blacklist) > 0:
 			tokens.extend(new_blacklist)
 			save_local_blacklist()
-			send_blacklist(new_blacklist)
+
+		send_blacklist()
 
 	except Exception as e:
 		logger.error("Failed to get article list.")
@@ -214,30 +215,30 @@ def load_bots_data():
 			new_bots.append(line)
 	return new_bots
 
-def send_blacklist(blacklist):
-    if len(blacklist) > 0:
-        for bot in bots:
-            logger.info(f"Fetching current blacklist from {bot['ip_address']}")
-            api_bot = FtRestClient(f"http://{bot['ip_address']}", bot['username'], bot['password'])
+def send_blacklist():
+    # if len(blacklist) > 0 or force_update%5 ==0:
+	for bot in bots:
+		logger.info(f"Fetching current blacklist from {bot['ip_address']}")
+		api_bot = FtRestClient(f"http://{bot['ip_address']}", bot['username'], bot['password'])
 
-            # 获取当前的 bot 的 blacklist
-            current_blacklist = set(api_bot.blacklist())
+		# 获取当前的 bot 的 blacklist
+		current_blacklist = set(api_bot.blacklist()['blacklist'])
 
-            # 找出传入的 blacklist 中 bot 目前不包含的条目
-            new_blacklist_items = set(blacklist) - current_blacklist
+		# 找出传入的 blacklist 中 bot 目前不包含的条目
+		new_blacklist_items = set(tokens) - current_blacklist
 
-            # 如果有不一致的条目，发送更新
-            if new_blacklist_items:
-                logger.info(f"Updating blacklist for {bot['ip_address']} with {new_blacklist_items}")
-                api_bot.blacklist(*new_blacklist_items)
-            else:
-                logger.info(f"No updates needed for {bot['ip_address']}")
+		# 如果有不一致的条目，发送更新
+		if new_blacklist_items:
+			logger.info(f"Updating blacklist for {bot['ip_address']} with {new_blacklist_items}")
+			api_bot.blacklist(*new_blacklist_items)
+		else:
+			logger.info(f"No updates needed for {bot['ip_address']}")
 
 
 if __name__ == "__main__":
 	load_bots_data()
 	open_local_blacklist()
-	send_blacklist(tokens)
+	send_blacklist()
 	open_local_processed()
 
 	starttime = time.monotonic()
