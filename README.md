@@ -1,4 +1,14 @@
 # binance_delist
+## Support This Project 🎉
+
+If you find this project helpful, consider supporting us by signing up through our referral links. This helps us continue development and maintain the project.
+
+- 🌟 [Binance - Trade and Earn](https://passport.ucloud.cn/?invitation_code=C1xFDCF5A6734AB)  
+  Join Binance, the world's leading cryptocurrency exchange, and enjoy a seamless trading experience.
+
+- ☁️ [UCloud - Scalable Cloud Solutions](https://passport.ucloud.cn/?invitation_code=C1xFDCF5A6734AB)  
+  Use UCloud for reliable and affordable cloud infrastructure for your next project.
+
 
 Scrape binance web for delisting announcement and send API call to specified bots to blacklist them
 
