@@ -60,7 +60,7 @@ def get_delist_tokens(url):
 		else:
 			response = requests.get(url)
 		response.raise_for_status()  # 如果请求失败将会抛出异常
-		count_notice = 5
+		count_notice = 10
 		html_source = response.text
 		soup = BeautifulSoup(html_source, "html.parser")
 		script_tag = soup.find("script", {"id": "__APP_DATA", "type": "application/json"})
@@ -116,7 +116,6 @@ def get_delist_tokens(url):
 							if "Binance will remove" in content:
 								if content and (content not in has_been_processed) and (content not in new_processed):
 									new_processed.append(content)	
-									logger.info(f"Found delisting notice: {content}")									
 									# 使用正则表达式提取交易对
 									pairs = re.findall(r'\b[A-Z]+/[A-Z]+\b', content)
 									logger.info(f"Extracted pairs: {pairs}")
@@ -126,6 +125,7 @@ def get_delist_tokens(url):
 										coin = coin.strip()
 										if (not coin in tokens) and (not coin in new_blacklist):
 											new_blacklist.append(coin)   
+									logger.info(f"Found delisting notice: {content}")									
 					except requests.RequestException as e:
 						logger.error(f"Failed to fetch new URL: {new_url}")
 						logger.error(e)
@@ -240,7 +240,7 @@ def send_blacklist():
 
 
 if __name__ == "__main__":
-	load_bots_data()
+	bots = load_bots_data()
 	open_local_blacklist()
 	send_blacklist()
 	open_local_processed()
@@ -249,5 +249,5 @@ if __name__ == "__main__":
 	while True:
 		get_delist_tokens(url)
 		time.sleep(loop_secs - ((time.monotonic() - starttime) % loop_secs))
-		load_bots_data()
+		bots = load_bots_data()
 		
