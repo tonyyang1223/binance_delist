@@ -39,6 +39,27 @@ handler_rf = RotatingFileHandler(
 handler_rf.setFormatter(Formatter(FILE_LOGFORMAT))
 logger.addHandler(handler_rf)
 
+def find_articles(data):
+    # 如果当前数据是字典类型，递归遍历所有键
+    if isinstance(data, dict):
+        for key, value in data.items():
+            # 如果找到了 "articles" 键，返回其值
+            if key == 'articles':
+                return value
+            # 如果当前值是字典或列表，继续递归查找
+            elif isinstance(value, (dict, list)):
+                result = find_articles(value)
+                if result is not None:
+                    return result
+    # 如果当前数据是列表类型，遍历列表中的每个元素
+    elif isinstance(data, list):
+        for item in data:
+            result = find_articles(item)
+            if result is not None:
+                return result
+    # 如果没有找到，返回 None
+    return None
+
 def get_delist_tokens(url):
 	class_p_list_coins = "css-zwb0rk"
 	new_blacklist = []
@@ -59,59 +80,66 @@ def get_delist_tokens(url):
 		json_data = json.loads(script_tag.string)
 		
 		# 查找 articles 列表
-		for catalog in json_data["appState"]["loader"]["dataByRouteId"]["d9b2"]["catalogs"]:            
+		# import pdb
+		# pdb.set_trace()
+		articles = find_articles(json_data["appState"]["loader"]["dataByRouteId"])
+		if articles is not None:
+			logger.info("Found articles:", articles)
+		else:
+			logger.error("Articles not found.")
+		# for catalog in json_data["appState"]["loader"]["dataByRouteId"]["d9b2"]["catalogs"]:            
 		
 			# 遍历并解析每个文章条目
-			for article in catalog["articles"]:
-				article_id = article.get("id")
-				code = article.get("code")
-				title = article.get("title", "").upper()
-				article_type = article.get("type")
-				release_date = article.get("releaseDate")
-				
-				if title and (title not in has_been_processed) and (title not in new_processed):
-					new_processed.append(title)
-					if "BINANCE WILL DELIST " in title:
+		for article in articles:
+			article_id = article.get("id")
+			code = article.get("code")
+			title = article.get("title", "").upper()
+			article_type = article.get("type")
+			release_date = article.get("releaseDate")
+			
+			if title and (title not in has_been_processed) and (title not in new_processed):
+				new_processed.append(title)
+				if "BINANCE WILL DELIST " in title:
 
-						logger.info(f"New title : {title}")
-						title = title.replace("BINANCE WILL DELIST ", "")
-						arr_title = title.split(" ON ")
-						arr_coins = arr_title[0].split(", ")
-						for coin in arr_coins:
-							blacklist = f"{coin}/.*"
-							if (blacklist not in tokens) and (blacklist not in new_blacklist):
-								new_blacklist.append(blacklist)
-					elif ("NOTICE OF REMOVAL OF " in title) and ("MARGIN" not in title) and (count_notice > 0):
+					logger.info(f"New title : {title}")
+					title = title.replace("BINANCE WILL DELIST ", "")
+					arr_title = title.split(" ON ")
+					arr_coins = arr_title[0].split(", ")
+					for coin in arr_coins:
+						blacklist = f"{coin}/.*"
+						if (blacklist not in tokens) and (blacklist not in new_blacklist):
+							new_blacklist.append(blacklist)
+				elif ("NOTICE OF REMOVAL OF " in title) and ("MARGIN" not in title) and (count_notice > 0):
+					
+					count_notice -= 1
+					formatted_title = title.lower().replace(" ", "-")
+					new_url = f"https://www.binance.com/en/support/announcement/{formatted_title}-{code}"
+					logger.info(f"NOTICE OF REMOVAL OF  url {new_url}")
+					try:
+						new_response = requests.get(new_url)
+						new_response.raise_for_status()
 						
-						count_notice -= 1
-						formatted_title = title.lower().replace(" ", "-")
-						new_url = f"https://www.binance.com/en/support/announcement/{formatted_title}-{code}"
-						logger.info(f"NOTICE OF REMOVAL OF  url {new_url}")
-						try:
-							new_response = requests.get(new_url)
-							new_response.raise_for_status()
-							
-							# 进一步处理新 URL 的内容
-							new_soup = BeautifulSoup(new_response.text, "html.parser")
-							meta_tags = new_soup.head.find_all("meta", content=True)
-							
-							for meta in meta_tags:
-								content = meta.get("content", "")
-								if "Binance will remove" in content:
-									logger.info(f"Found delisting notice: {content}")
-									
-									# 使用正则表达式提取交易对
-									pairs = re.findall(r'\b[A-Z]+/[A-Z]+\b', content)
-									logger.info(f"Extracted pairs: {pairs}")
-									# 将 pairs 添加到黑名单列表，或执行其他处理
-									
-									for coin in pairs:
-										coin = coin.strip()
-										if (not coin in tokens) and (not coin in new_blacklist):
-											new_blacklist.append(coin)   
-						except requests.RequestException as e:
-							logger.error(f"Failed to fetch new URL: {new_url}")
-							logger.error(e)
+						# 进一步处理新 URL 的内容
+						new_soup = BeautifulSoup(new_response.text, "html.parser")
+						meta_tags = new_soup.head.find_all("meta", content=True)
+						
+						for meta in meta_tags:
+							content = meta.get("content", "")
+							if "Binance will remove" in content:
+								logger.info(f"Found delisting notice: {content}")
+								
+								# 使用正则表达式提取交易对
+								pairs = re.findall(r'\b[A-Z]+/[A-Z]+\b', content)
+								logger.info(f"Extracted pairs: {pairs}")
+								# 将 pairs 添加到黑名单列表，或执行其他处理
+								
+								for coin in pairs:
+									coin = coin.strip()
+									if (not coin in tokens) and (not coin in new_blacklist):
+										new_blacklist.append(coin)   
+					except requests.RequestException as e:
+						logger.error(f"Failed to fetch new URL: {new_url}")
+						logger.error(e)
 		if len(new_processed) > 0:
 			has_been_processed.extend(new_processed)
 			save_local_processed()
