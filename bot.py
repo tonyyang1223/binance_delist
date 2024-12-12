@@ -123,10 +123,28 @@ def get_delist_tokens(url):
 						
 						# 进一步处理新 URL 的内容
 						new_soup = BeautifulSoup(new_response.text, "html.parser")
-						meta_tags = new_soup.head.find_all("meta", content=True)
-						
-						for meta in meta_tags:
-							content = meta.get("content", "")
+						script_tags =new_soup.find_all('script', type='application/json')
+						for script in script_tags:
+							json_data = json.loads(script.string)							
+							# 查找所有子节点中包含 text 的字段
+							def extract_text(data):
+								content = ""
+								if isinstance(data, dict):
+									for key, value in data.items():
+										if key == "text":
+											if "Binance will remove" in value:
+												logger.info(f"Found delisting notice: {value}")
+												content = content + value
+											if "Binance will remove" in content:	
+												content = content + value
+										elif isinstance(value, list):
+											for item in value:
+												return extract_text(item)
+										elif isinstance(value, dict):
+											return extract_text(value)
+									return content
+							# 提取 text
+							content = extract_text(json_data)
 							if "Binance will remove" in content:
 								logger.info(f"Found delisting notice: {content}")
 								if content and (content not in has_been_processed) and (content not in new_processed):
@@ -139,7 +157,23 @@ def get_delist_tokens(url):
 								for coin in pairs:
 									coin = coin.strip()
 									if (not coin in tokens) and (not coin in new_blacklist):
-										new_blacklist.append(coin)   
+										new_blacklist.append(coin)
+
+						# for meta in meta_tags:
+						# 	content = meta.get("content", "")
+						# 	if "Binance will remove" in content:
+						# 		logger.info(f"Found delisting notice: {content}")
+						# 		if content and (content not in has_been_processed) and (content not in new_processed):
+						# 			new_processed.append(content)
+						# 		# 使用正则表达式提取交易对
+						# 		pairs = re.findall(r'\b[A-Z]+/[A-Z]+\b', content)
+						# 		logger.info(f"Extracted pairs: {pairs}")
+						# 		# 将 pairs 添加到黑名单列表，或执行其他处理
+								
+						# 		for coin in pairs:
+						# 			coin = coin.strip()
+						# 			if (not coin in tokens) and (not coin in new_blacklist):
+						# 				new_blacklist.append(coin)   
 					except requests.RequestException as e:
 						logger.error(f"Failed to fetch new URL: {new_url}")
 						logger.error(e)
