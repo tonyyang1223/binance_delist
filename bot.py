@@ -86,7 +86,7 @@ def get_delist_tokens(url):
 		# pdb.set_trace()
 		articles = find_articles(json_data["appState"]["loader"]["dataByRouteId"])
 		if articles is not None:
-			logger.info("Found articles:", articles)
+			logger.info(f"Found articles: count {len(articles)}")
 		else:
 			logger.error("Articles not found.")
 		# for catalog in json_data["appState"]["loader"]["dataByRouteId"]["d9b2"]["catalogs"]:            
