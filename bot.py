@@ -61,14 +61,16 @@ def find_articles(data):
     return None
 
 def get_delist_tokens(url):
+
 	class_p_list_coins = "css-zwb0rk"
 	new_blacklist = []
 	new_processed = []
 	try:
 		logger.info("Scrape delisting page")
+		
 		response = requests.get(url)
 		response.raise_for_status()  # 如果请求失败将会抛出异常
-		count_notice = 5
+		count_notice = 10
 		html_source = response.text
 		soup = BeautifulSoup(html_source, "html.parser")
 		script_tag = soup.find("script", {"id": "__APP_DATA", "type": "application/json"})
@@ -127,7 +129,8 @@ def get_delist_tokens(url):
 							content = meta.get("content", "")
 							if "Binance will remove" in content:
 								logger.info(f"Found delisting notice: {content}")
-								
+								if content and (content not in has_been_processed) and (content not in new_processed):
+									new_processed.append(content)
 								# 使用正则表达式提取交易对
 								pairs = re.findall(r'\b[A-Z]+/[A-Z]+\b', content)
 								logger.info(f"Extracted pairs: {pairs}")
@@ -147,7 +150,7 @@ def get_delist_tokens(url):
 		if len(new_blacklist) > 0:
 			tokens.extend(new_blacklist)
 			save_local_blacklist()
-
+		logger.info(f"Send to bost blacklist")
 		send_blacklist()
 
 	except Exception as e:
@@ -156,6 +159,7 @@ def get_delist_tokens(url):
 
 
 def open_local_blacklist():
+
 
 	try:
 		logger.info("Loading local blacklist file")
@@ -222,11 +226,12 @@ def save_local_processed():
 
 
 def load_bots_data():
+	new_bots = []
 	with Path(path_bots_file).open() if path_bots_file != '-' else sys.stdin as file:
 		data_bots = rapidjson.load(file, parse_mode=CONFIG_PARSE_MODE)
 		for line in data_bots:
-			bots.append(line)
-
+			new_bots.append(line)
+	return new_bots
 
 def send_blacklist():
     # if len(blacklist) > 0 or force_update%5 ==0:
@@ -249,7 +254,7 @@ def send_blacklist():
 
 
 if __name__ == "__main__":
-	load_bots_data()
+	bots = load_bots_data()
 	open_local_blacklist()
 	send_blacklist()
 	open_local_processed()
@@ -258,3 +263,5 @@ if __name__ == "__main__":
 	while True:
 		get_delist_tokens(url)
 		time.sleep(loop_secs - ((time.monotonic() - starttime) % loop_secs))
+		bots = load_bots_data()
+		
