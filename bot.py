@@ -59,7 +59,22 @@ def find_articles(data):
                 return result
     # 如果没有找到，返回 None
     return None
-
+def extract_text(data):
+	content = ""
+	if isinstance(data, dict):
+		for key, value in data.items():
+			if key == "text":
+				if "Binance will remove" in value:
+					logger.info(f"Found delisting notice: {value}")
+					content = content + value
+				if "Binance will remove" in content:	
+					content = content + value
+			elif isinstance(value, list):
+				for item in value:
+					return extract_text(item)
+			elif isinstance(value, dict):
+				return extract_text(value)
+	return content
 def get_delist_tokens(url):
 
 	class_p_list_coins = "css-zwb0rk"
@@ -127,22 +142,7 @@ def get_delist_tokens(url):
 						for script in script_tags:
 							json_data = json.loads(script.string)							
 							# 查找所有子节点中包含 text 的字段
-							def extract_text(data):
-								content = ""
-								if isinstance(data, dict):
-									for key, value in data.items():
-										if key == "text":
-											if "Binance will remove" in value:
-												logger.info(f"Found delisting notice: {value}")
-												content = content + value
-											if "Binance will remove" in content:	
-												content = content + value
-										elif isinstance(value, list):
-											for item in value:
-												return extract_text(item)
-										elif isinstance(value, dict):
-											return extract_text(value)
-									return content
+							
 							# 提取 text
 							content = extract_text(json_data)
 							if "Binance will remove" in content:
