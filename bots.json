@@ -1,0 +1,47 @@
+[
+{
+"ip_address": "10.35.171.136:8413",
+"username": "bot1",
+"password": "bot1"
+},
+{
+"ip_address": "10.35.171.136:8414",
+"username": "bot2",
+"password": "bot2"
+},
+{
+"ip_address": "10.35.171.136:8415",
+"username": "bot3",
+"password": "bot3"
+},
+{
+"ip_address": "10.35.171.136:8416",
+"username": "bot4",
+"password": "bot4"
+},
+{
+"ip_address": "10.35.171.136:8417",
+"username": "bot5",
+"password": "bot5"
+},
+{
+"ip_address": "10.35.75.234:8413",
+"username": "bot1",
+"password": "bot1"
+},
+{
+"ip_address": "10.35.75.234:8414",
+"username": "bot2",
+"password": "bot2"
+},
+{
+"ip_address": "10.35.75.234:8415",
+"username": "bot5",
+"password": "bot5"
+},
+{
+"ip_address": "10.35.75.234:8417",
+"username": "bot5",
+"password": "bot5"
+},
+]
